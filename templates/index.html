@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Music DNA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="bento-grid">
+    <header class="glass-panel header-box">
+        <h1 class="brand-title">🎵 DNA <span style="color:var(--primary)">AI</span></h1>
+        <div class="search-wrapper">
+            <input type="text" id="songInput" placeholder="Type a song name..." onkeypress="handleEnter(event)">
+            <button onclick="getRecs()">Analyze</button>
+        </div>
+    </header>
+
+    <aside class="glass-panel">
+        <h3 style="margin:0">🎛️ Context</h3>
+        
+        <div style="display:flex; flex-direction:column; gap:15px; width:100%;">
+            <select id="mood" class="modern-select" onchange="manualThemeChange()">
+                <option value="default">Auto / Any Mood</option>
+                <option value="happy">Happy 😊</option>
+                <option value="chill">Chill 🌊</option>
+                <option value="sad">Sad 🌧️</option>
+            </select>
+            
+            <div style="display:flex; gap:10px; width: 100%;">
+                <select id="startYear" class="modern-select" style="flex: 1;">
+                    <option value="0">From Year</option>
+                </select>
+                <select id="endYear" class="modern-select" style="flex: 1;">
+                    <option value="3000">To Year</option>
+                </select>
+            </div>
+
+            <div class="slider-container">
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; opacity:0.8; margin-bottom:10px;">
+                    <label>Recommendation Count</label>
+                    <strong id="limitVal" style="color:var(--primary)">10</strong>
+                </div>
+                <input type="range" id="limit" min="5" max="30" value="10" step="1" 
+                       oninput="document.getElementById('limitVal').innerText = this.value">
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </aside>
+
+    <main class="glass-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <h3 style="margin:0">✨ Recommendations</h3>
+            <button id="exportBtn" class="export-btn" onclick="downloadPlaylist()">⬇ Download CSV</button>
+        </div>
+        
+        <ul id="results" class="song-list">
+            <div style="height:100%; display:flex; align-items:center; justify-content:center; opacity:0.5; flex-direction:column;">
+                <p>Ready to analyze audio vectors...</p>
+            </div>
+        </ul>
+    </main>
+</div>
+
+<script>
+    let myChart;
+    let currentData = [];
+
+    // 1. AUTO-POPULATE YEARS ON LOAD
+    document.addEventListener('DOMContentLoaded', function() {
+        const startSelect = document.getElementById('startYear');
+        const endSelect = document.getElementById('endYear');
+        const currentYear = new Date().getFullYear();
+
+        // 1950 to Current Year
+        for (let year = currentYear; year >= 1950; year--) {
+            let option1 = new Option(year, year);
+            let option2 = new Option(year, year);
+            
+            startSelect.add(option1);
+            endSelect.add(option2);
+        }
+    });
+
+    // 2. THEME CONFIGURATION
+    const themes = {
+        'happy': { color: '#FFD700', bg: 'radial-gradient(circle at top left, #403000, #09090b)' },
+        'chill': { color: '#00d2ff', bg: 'radial-gradient(circle at top left, #002b36, #09090b)' },
+        'sad':   { color: '#a18cd1', bg: 'radial-gradient(circle at top left, #2d2038, #09090b)' },
+        'default': { color: '#1DB954', bg: 'radial-gradient(circle at top left, #1a1a2e, #09090b)' }
+    };
+
+    function applyTheme(moodName) {
+        const t = themes[moodName] || themes['default'];
+        document.documentElement.style.setProperty('--primary', t.color);
+        document.body.style.background = t.bg;
+        if(myChart) {
+            myChart.data.datasets[0].borderColor = t.color;
+            myChart.data.datasets[0].backgroundColor = t.color + '40';
+            myChart.data.datasets[0].pointBackgroundColor = t.color;
+            myChart.update();
+        }
+    }
+
+    function manualThemeChange() { applyTheme(document.getElementById('mood').value); }
+    function handleEnter(e) { if(e.key === 'Enter') getRecs(); }
+
+    // 3. MAIN RECOMMENDATION LOGIC
+    async function getRecs() {
+        const btn = document.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Scanning...";
+        btn.disabled = true;
+        
+        const payload = {
+            song_name: document.getElementById('songInput').value,
+            mood: document.getElementById('mood').value,
+            year_range: [
+                parseInt(document.getElementById('startYear').value) || 0,
+                parseInt(document.getElementById('endYear').value) || 3000
+            ],
+            limit: parseInt(document.getElementById('limit').value) || 10
+        };
+
+        try {
+            const res = await fetch('/recommend', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if(data.error) throw new Error(data.error);
+
+            // Auto-Mood Switch
+            if(document.getElementById('mood').value === 'default' && data.detected_mood) {
+                applyTheme(data.detected_mood);
+            }
+
+            currentData = data.recommendations;
+            renderResults(data.recommendations);
+            updateChart(data.selected, data.recommendations[0]);
+            document.getElementById('exportBtn').style.display = 'block';
+
+        } catch(e) {
+            document.getElementById('results').innerHTML = `<p style="color:#ff5555; text-align:center; margin-top:50px;">❌ Song not found. Try another spelling!</p>`;
+        }
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+
+    // 4. RENDER CARDS
+   function renderResults(songs) {
+        let html = '';
+        songs.forEach(s => {
+            html += `
+                <li class="song-item">
+                    <div class="song-info">
+                        <h4>${s.track_name}</h4>
+                        <div class="song-meta">
+                            <span>${s.artists}</span>
+                            <span class="meta-tag">${s.year}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <button class="fb-btn" onclick="feedback('${s.track_name.replace(/'/g, "\\'")}', 1)">👍</button>
+                        <button class="fb-btn" onclick="feedback('${s.track_name.replace(/'/g, "\\'")}', -1)">👎</button>
+                    </div>
+                </li>`;
+        });
+        document.getElementById('results').innerHTML = html;
+    }
+
+    // 5. CHART CONFIG
+    function updateChart(sel, match) {
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        const keys = ['danceability', 'energy', 'speechiness', 'acousticness', 'valence'];
+
+        if(myChart) myChart.destroy();
+        
+        myChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Dance', 'Energy', 'Speech', 'Acoustic', 'Valence'],
+                datasets: [
+                    { 
+                        label: 'Input', 
+                        data: keys.map(k => sel.features[k]), 
+                        borderColor: color, 
+                        backgroundColor: color + '40',
+                        borderWidth: 3,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 6
+                    },
+                    { 
+                        label: 'Match', 
+                        data: keys.map(k => match[k]), 
+                        borderColor: 'rgba(255,255,255,0.3)', 
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                elements: { line: { tension: 0.3 } },
+                scales: { 
+                    r: { 
+                        min: 0, max: 1, 
+                        grid: { color: 'rgba(255,255,255,0.05)', circular: true },
+                        angleLines: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { display: false },
+                        pointLabels: { color: '#ccc', font: { size: 12, family: 'Space Grotesk' } }
+                    } 
+                },
+                plugins: { legend: { display: false } }
+            } 
+        });
+    }
+
+    // 6. EXPORT CSV
+    function downloadPlaylist() {
+        let csv = "Track Name,Artist,Year\n";
+        currentData.forEach(d => {
+            const cleanTrack = d.track_name.replace(/,/g, '');
+            const cleanArtist = d.artists.replace(/['"\[\]]/g, '').replace(/,/g, ' & ');
+            csv += `"${cleanTrack}","${cleanArtist}",${d.year}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'my_ai_playlist.csv';
+        a.click();
+    }
+
+    // 7. FEEDBACK
+    async function feedback(name, type) {
+        await fetch('/feedback', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({track_name: name, sentiment: type})
+        });
+    }
+</script>
+</body>
+</html>
