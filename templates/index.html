@@ -157,19 +157,32 @@
    function renderResults(songs) {
         let html = '';
         songs.forEach(s => {
+            // CLEANUP: Remove brackets and quotes from artist names
+            // Turns "['The Beatles']" into "The Beatles"
+            const cleanArtist = s.artists[0].name.replace(/[\[\]']/g, "");
+
             html += `
                 <li class="song-item">
+                    <img src="${s.album.images[0].url}" class="album-art">
+                    
                     <div class="song-info">
-                        <h4>${s.track_name}</h4>
+                        <h4>${s.name}</h4>
                         <div class="song-meta">
-                            <span>${s.artists}</span>
-                            <span class="meta-tag">${s.year}</span>
+                            <span class="artist-name">${cleanArtist}</span>
+                            <span class="meta-separator">•</span>
+                            <span class="meta-tag year-tag">${s.year}</span>
+                            <span class="meta-tag album-tag">${s.album.name || 'Single'}</span>
                         </div>
                     </div>
                     
                     <div class="actions">
-                        <button class="fb-btn" onclick="feedback('${s.track_name.replace(/'/g, "\\'")}', 1)">👍</button>
-                        <button class="fb-btn" onclick="feedback('${s.track_name.replace(/'/g, "\\'")}', -1)">👎</button>
+                        <button class="fb-btn like-btn" onclick="feedback('${s.name.replace(/'/g, "\\'")}', 1)">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        </button>
+                        
+                        <button class="fb-btn dislike-btn" onclick="feedback('${s.name.replace(/'/g, "\\'")}', -1)">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg>
+                        </button>
                     </div>
                 </li>`;
         });
@@ -180,6 +193,8 @@
     function updateChart(sel, match) {
         const ctx = document.getElementById('radarChart').getContext('2d');
         const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        
+        // The 5 key metrics we want to visualize
         const keys = ['danceability', 'energy', 'speechiness', 'acousticness', 'valence'];
 
         if(myChart) myChart.destroy();
@@ -191,9 +206,10 @@
                 datasets: [
                     { 
                         label: 'Input', 
+                        // UPDATED: Access data via .features object
                         data: keys.map(k => sel.features[k]), 
                         borderColor: color, 
-                        backgroundColor: color + '40',
+                        backgroundColor: color + '40', // Semi-transparent glow
                         borderWidth: 3,
                         pointBackgroundColor: color,
                         pointBorderColor: '#fff',
@@ -201,7 +217,8 @@
                     },
                     { 
                         label: 'Match', 
-                        data: keys.map(k => match[k]), 
+                        // UPDATED: Access data via .features object here too
+                        data: keys.map(k => match.features[k]), 
                         borderColor: 'rgba(255,255,255,0.3)', 
                         backgroundColor: 'transparent',
                         borderWidth: 2,
@@ -213,14 +230,17 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                elements: { line: { tension: 0.3 } },
+                elements: { line: { tension: 0.3 } }, // Smooth curves
                 scales: { 
                     r: { 
                         min: 0, max: 1, 
                         grid: { color: 'rgba(255,255,255,0.05)', circular: true },
                         angleLines: { color: 'rgba(255,255,255,0.05)' },
                         ticks: { display: false },
-                        pointLabels: { color: '#ccc', font: { size: 12, family: 'Space Grotesk' } }
+                        pointLabels: { 
+                            color: '#ccc', 
+                            font: { size: 12, family: 'Space Grotesk' } 
+                        }
                     } 
                 },
                 plugins: { legend: { display: false } }
@@ -230,11 +250,11 @@
 
     // 6. EXPORT CSV
     function downloadPlaylist() {
-        let csv = "Track Name,Artist,Year\n";
+        let csv = "Track Name,Artist\n";
         currentData.forEach(d => {
-            const cleanTrack = d.track_name.replace(/,/g, '');
-            const cleanArtist = d.artists.replace(/['"\[\]]/g, '').replace(/,/g, ' & ');
-            csv += `"${cleanTrack}","${cleanArtist}",${d.year}\n`;
+            const cleanTrack = d.name.replace(/,/g, '');
+            const cleanArtist = d.artists[0].name.replace(/,/g, '');
+            csv += `"${cleanTrack}","${cleanArtist}"\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);

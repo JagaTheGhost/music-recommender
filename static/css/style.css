@@ -1,10 +1,10 @@
 /* -----------------------------------------------------------
-   FONTS & VARIABLES
+   1. FONTS & VARIABLES
 ----------------------------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&family=Space+Grotesk:wght@400;600;700&display=swap');
 
 :root {
-    /* 🌑 THIS FIXES THE NATIVE DROPDOWN SCROLLBAR */
+    /* 🌑 Forces browser inputs/scrollbars to Dark Mode */
     color-scheme: dark; 
     
     --primary: #1DB954;
@@ -15,32 +15,24 @@
 }
 
 /* -----------------------------------------------------------
-   GLOBAL SCROLLBAR STYLING (The "UI Match" Fix)
+   2. GLOBAL SCROLLBAR (Matches UI)
 ----------------------------------------------------------- */
-/* Width */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
-
-/* Track */
 ::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2); 
     border-radius: 4px;
 }
-
-/* Handle */
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2); 
     border-radius: 4px;
     border: 1px solid rgba(0,0,0,0.1);
 }
-
-/* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary); 
 }
-
 /* Firefox Support */
 * {
     scrollbar-width: thin;
@@ -48,7 +40,7 @@
 }
 
 /* -----------------------------------------------------------
-   MAIN STYLES
+   3. MAIN LAYOUT
 ----------------------------------------------------------- */
 body {
     background: var(--bg-gradient);
@@ -57,7 +49,7 @@ body {
     margin: 0;
     padding: 0;
     height: 100vh;
-    overflow: hidden; 
+    overflow: hidden; /* App-like feel */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -67,9 +59,7 @@ h1, h2, h3, h4, button, .match-label, .meta-tag, strong {
     font-family: 'Space Grotesk', sans-serif;
 }
 
-/* -----------------------------------------------------------
-   LAYOUT (BENTO GRID)
------------------------------------------------------------ */
+/* BENTO GRID (The Main Container) */
 .bento-grid {
     display: grid;
     grid-template-columns: 350px 1fr; 
@@ -93,7 +83,7 @@ h1, h2, h3, h4, button, .match-label, .meta-tag, strong {
 }
 
 /* -----------------------------------------------------------
-   HEADER & SEARCH
+   4. HEADER & SEARCH
 ----------------------------------------------------------- */
 .header-box {
     grid-column: 1 / -1;
@@ -109,9 +99,6 @@ h1, h2, h3, h4, button, .match-label, .meta-tag, strong {
     left: 30px;
     font-size: 1.5rem;
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 .search-wrapper { 
@@ -123,9 +110,6 @@ h1, h2, h3, h4, button, .match-label, .meta-tag, strong {
     z-index: 10;
 }
 
-/* -----------------------------------------------------------
-   INPUTS & BUTTONS
------------------------------------------------------------ */
 input[type="text"] {
     background: rgba(0,0,0,0.4);
     border: 1px solid var(--glass-border);
@@ -155,7 +139,7 @@ button {
 button:hover { filter: brightness(1.1); transform: scale(1.05); }
 
 /* -----------------------------------------------------------
-   SIDEBAR CONTROLS
+   5. SIDEBAR CONTROLS
 ----------------------------------------------------------- */
 aside.glass-panel {
     justify-content: flex-start;
@@ -163,7 +147,7 @@ aside.glass-panel {
     overflow: hidden; 
 }
 
-/* 📅 MODERN GLASS DROPDOWNS */
+/* Modern Glass Dropdowns */
 .modern-select {
     appearance: none;
     -webkit-appearance: none;
@@ -184,23 +168,9 @@ aside.glass-panel {
     cursor: pointer;
     transition: all 0.2s;
 }
-
-.modern-select:hover {
-    border-color: var(--primary);
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.modern-select:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
-}
-
-/* Fix for the dropdown menu popup background */
-.modern-select option {
-    background-color: #1a1a2e; /* Dark background matches theme */
-    color: white;
-    padding: 10px;
-}
+.modern-select:hover { border-color: var(--primary); background-color: rgba(255, 255, 255, 0.05); }
+.modern-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3); }
+.modern-select option { background-color: #0f0f1a; color: white; padding:10px; }
 
 /* Audio Fader Slider */
 .slider-container {
@@ -231,13 +201,11 @@ input[type=range]::-webkit-slider-thumb {
 }
 input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
 
-/* -----------------------------------------------------------
-   CHART
------------------------------------------------------------ */
+/* Chart Container */
 .chart-container {
     position: relative;
     flex-grow: 1; /* Takes remaining space */
-    min-height: 0; /* Prevents overflow */
+    min-height: 0; 
     width: 100%;
     display: flex;
     align-items: center;
@@ -246,7 +214,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
 canvas { filter: drop-shadow(0 0 10px rgba(255,255,255,0.1)); }
 
 /* -----------------------------------------------------------
-   RESULTS & SCROLLING
+   6. RESULTS PANEL (Right Side)
 ----------------------------------------------------------- */
 main.glass-panel {
     overflow: hidden;
@@ -262,45 +230,138 @@ main.glass-panel {
     min-height: 0;
     padding-bottom: 20px;
 }
-/* Scrollbar Styling */
-.song-list::-webkit-scrollbar { width: 6px; }
-.song-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-.song-list::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
 /* -----------------------------------------------------------
-   SONG CARDS
+   7. SONG CARDS & ALBUM ART (Polished UI)
 ----------------------------------------------------------- */
 .song-item {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
     align-items: center;
-    padding: 18px 24px;
+    padding: 15px 20px;
     border: 1px solid var(--glass-border);
     background: rgba(255,255,255,0.02);
-    border-radius: 18px;
+    border-radius: 16px;
     margin-bottom: 12px;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    gap: 15px;
 }
+
 .song-item:hover {
     background: linear-gradient(90deg, rgba(255,255,255,0.06), transparent);
     border-color: var(--primary);
-    transform: translateX(5px);
+    transform: translateX(4px);
 }
 
-.song-info h4 { margin: 0; font-size: 1.15rem; color: #fff; }
-.song-meta { font-size: 0.9rem; opacity: 0.7; margin-top: 6px; display:flex; gap:12px; }
-.meta-tag { background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; }
+/* Album Art */
+.album-art {
+    width: 55px;
+    height: 55px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+}
 
-.match-container { text-align: right; min-width: 140px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.match-bar-bg { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
-.match-bar-fill { height: 100%; background: var(--primary); border-radius: 10px; box-shadow: 0 0 10px var(--primary); }
+/* Text Layout */
+.song-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    gap: 4px;
+}
 
-.export-btn { 
-    display:none; background:transparent; border:1px solid var(--primary); color:var(--primary); padding:8px 16px; 
+.song-info h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-meta {
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.artist-name { color: rgba(255, 255, 255, 0.9); font-weight: 500; }
+.meta-separator { font-size: 0.6rem; opacity: 0.4; }
+
+/* Tags */
+.meta-tag {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.05);
+    white-space: nowrap;
+}
+.year-tag {
+    color: var(--primary); /* Glows with theme */
+    background: rgba(255, 255, 255, 0.02);
+    font-weight: 700;
+}
+.album-tag {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* -----------------------------------------------------------
-   MOBILE RESPONSIVENESS
+   8. MODERN INTERACTION BUTTONS
+----------------------------------------------------------- */
+.actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.fb-btn {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Like (Heart) Hover */
+.like-btn:hover {
+    background: rgba(255, 0, 100, 0.15) !important;
+    border-color: #ff0062;
+    color: #ff0062;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 0, 98, 0.2);
+}
+
+/* Dislike Hover */
+.dislike-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: #fff;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.fb-btn:active { transform: scale(0.9); }
+
+.export-btn { 
+    display:none; background:transparent; border:1px solid var(--primary); color:var(--primary); padding:8px 16px; margin-left: auto;
+}
+
+/* -----------------------------------------------------------
+   9. MOBILE RESPONSIVENESS
 ----------------------------------------------------------- */
 @media (max-width: 1000px) {
     body { overflow: auto; height: auto; display: block; padding: 20px 0; }

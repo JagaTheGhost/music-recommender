@@ -3,25 +3,27 @@ import pandas as pd
 import pickle
 import os
 from models import db, Feedback
-from model_utils import get_recommendations
+from model_utils import MusicEngine
 
 app = Flask(__name__)
 
-# Database Config
+# DB Setup
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'feedback.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
-# Load Data Once
-print("Loading Engine...")
+# Initialize Engine
+print("Loading Data...")
 df = pd.read_csv('data/spotify_tracks.csv')
 df.columns = df.columns.str.strip().str.lower()
 
 with open('models/song_embeddings.pkl', 'rb') as f:
     song_embeddings = pickle.load(f)
 
-# Initialize DB
+# Create the Engine Instance
+engine = MusicEngine(df, song_embeddings)
+
 with app.app_context():
     db.create_all()
 
@@ -33,25 +35,24 @@ def index():
 def recommend():
     req = request.json
     
-    # Get limit from request, default to 10 if missing
-    limit = req.get('limit', 10) 
-    
-    data = get_recommendations(
-        req.get('song_name'), 
-        df, 
-        song_embeddings, 
-        req.get('year_range'), 
-        req.get('mood'),
-        top_n=limit # Pass it to the function
+    data = engine.search_and_recommend(
+        song_name=req.get('song_name'),
+        year_range=req.get('year_range'),
+        mood=req.get('mood'),
+        limit=int(req.get('limit', 10))
     )
-    return jsonify(data) if data else (jsonify({"error": "No match"}), 404)
+    
+    if data:
+        return jsonify(data)
+    return jsonify({"error": "No match found"}), 404
 
 @app.route('/feedback', methods=['POST'])
 def feedback():
     data = request.json
+    # Note: We now expect clean data, so we might need to adjust what we save
     entry = Feedback(
-        track_name=data['track_name'], artists=data['artists'],
-        sentiment=data['sentiment'], energy=data['energy'], valence=data['valence']
+        track_name=data['track_name'], 
+        sentiment=data['sentiment']
     )
     db.session.add(entry)
     db.session.commit()
