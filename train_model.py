@@ -11,7 +11,7 @@ if not os.path.exists('models'):
     os.makedirs('models')
 
 # 1. Load Data
-df = pd.read_csv('data/spotify_tracks.csv')
+df = pd.read_csv('spotify_tracks.csv')
 df.columns = df.columns.str.strip().str.lower()
 
 # 2. Select the specific DL features from your image

@@ -1,276 +1,590 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Music DNA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sound Prism | AI Audio DNA</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#64FFDA">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </head>
-<body>
 
-<div class="bento-grid">
-    <header class="glass-panel header-box">
-        <h1 class="brand-title">🎵 DNA <span style="color:var(--primary)">AI</span></h1>
-        <div class="search-wrapper">
-            <input type="text" id="songInput" placeholder="Type a song name..." onkeypress="handleEnter(event)">
-            <button onclick="getRecs()">Analyze</button>
-        </div>
-    </header>
+<body class="theme-default">
 
-    <aside class="glass-panel">
-        <h3 style="margin:0">🎛️ Context</h3>
-        
-        <div style="display:flex; flex-direction:column; gap:15px; width:100%;">
-            <select id="mood" class="modern-select" onchange="manualThemeChange()">
-                <option value="default">Auto / Any Mood</option>
-                <option value="happy">Happy 😊</option>
-                <option value="chill">Chill 🌊</option>
-                <option value="sad">Sad 🌧️</option>
-            </select>
-            
-            <div style="display:flex; gap:10px; width: 100%;">
-                <select id="startYear" class="modern-select" style="flex: 1;">
-                    <option value="0">From Year</option>
-                </select>
-                <select id="endYear" class="modern-select" style="flex: 1;">
-                    <option value="3000">To Year</option>
-                </select>
+    <!-- Atmospheric Backstage -->
+    <div id="prism-bg"></div>
+    <div id="toast" class="toast"></div>
+
+
+    <div class="prism-container">
+        <!-- Branding Header -->
+        <header class="prism-header">
+            <div class="brand-glass">
+                <span class="brand-text">SOUND <span style="color:var(--primary)">PRISM</span></span>
             </div>
+            <div id="dnaStatsPanel" style="text-align: right;"></div>
+        </header>
 
-            <div class="slider-container">
-                <div style="display:flex; justify-content:space-between; font-size:0.85rem; opacity:0.8; margin-bottom:10px;">
-                    <label>Recommendation Count</label>
-                    <strong id="limitVal" style="color:var(--primary)">10</strong>
+        <main class="prism-main">
+            <!-- Hero Stage -->
+            <section class="hero-stage" id="hero">
+                <h1 class="hero-title">Decode Audio DNA.</h1>
+                <p class="hero-subtitle">Enter any track to visualize its structural vectors and discover similar sonic
+                    patterns.</p>
+
+                <div class="search-prism">
+                    <input type="text" id="songInput" placeholder="Enter a song..." onkeypress="handleEnter(event)">
+                    <button onclick="getRecs()" class="prism-trigger" id="analyzeBtn">
+                        <span>ANALYZE</span>
+                    </button>
                 </div>
-                <input type="range" id="limit" min="5" max="30" value="10" step="1" 
-                       oninput="document.getElementById('limitVal').innerText = this.value">
+            </section>
+
+            <!-- Bento Matrix -->
+            <div class="matrix-stage" id="results-trigger">
+                <div id="exploreState" style="text-align:center; padding: 80px; opacity:0.2;">
+                    <p style="letter-spacing: 2px;">READY TO DECODE</p>
+                </div>
+                <div id="results" class="bento-grid"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Portal (The Hub) -->
+    <nav class="floating-portal">
+        <button class="portal-action" onclick="togglePanel('discovery')">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>Filters</span>
+        </button>
+        <button class="portal-action" onclick="togglePanel('radar')">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                <path d="M22 12A10 10 0 0 0 12 2v10z" />
+            </svg>
+            <span>DNA Profile</span>
+        </button>
+        <button class="portal-action" onclick="togglePanel('mix')">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+            </svg>
+            <span>Mix (<span id="mixCounter">0</span>)</span>
+        </button>
+    </nav>
+
+    <!-- Overlay Panels -->
+    <!-- Discovery Station -->
+    <div id="discoveryPanel" class="prism-panel">
+        <div class="station-header">
+            <span class="station-title">Discovery Station</span>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <label style="font-size:0.7rem; opacity:0.4; text-transform:uppercase; letter-spacing:1px;">Era
+                Matrix</label>
+            <div class="year-matrix" id="yearGrid"></div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <label style="font-size:0.7rem; opacity:0.4; text-transform:uppercase; letter-spacing:1px;">Density
+                    Peak</label>
+                <span id="limitVal" style="font-weight:700; color:var(--primary)">10</span>
+            </div>
+            <input type="range" id="limit" min="5" max="30" value="10" step="1" style="width:100%"
+                oninput="document.getElementById('limitVal').innerText = this.value">
+        </div>
+
+        <div class="station-vault">
+            <label
+                style="font-size:0.7rem; opacity:0.4; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:10px;">Memory
+                Logs</label>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <!-- DNA Workstation -->
+    <div id="radarPanel" class="prism-panel">
+        <div class="station-header">
+            <span class="station-title">DNA Workstation</span>
+        </div>
+        <div class="radar-hub">
+            <div class="radar-vessel">
+                <canvas id="radarCanvas" style="max-height: 300px; max-width: 300px; margin: auto;"></canvas>
+            </div>
+            <div id="dnaDiagnostic"
+                style="width:100%; display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <!-- Mix Reactor -->
+    <div id="mixPanel" class="prism-panel">
+        <div class="station-header" style="justify-content: space-between;">
+            <span class="station-title">MIX REACTOR</span>
+            <div class="core-display" id="reactorResonance">0%</div>
+        </div>
+
+        <div class="reactor-vessel" id="playlistItems"></div>
+
+        <div class="reactor-core-section">
+            <div style="font-size:0.55rem; opacity:0.4; letter-spacing:1px; margin-bottom:10px; text-align:center;">
+                STATION DNA AGGREGATE</div>
+            <div id="mixDnaSummary"
+                style="display:grid; grid-template-columns: repeat(5, 1fr); gap:5px; width:100%; margin-bottom:15px;">
+            </div>
+
+            <div class="action-bar-reactor">
+                <button onclick="clearPlaylist()"
+                    style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:#fff; border-radius:12px; padding:12px; cursor:pointer; font-size:0.75rem; font-weight:700;">PURGE</button>
+                <button onclick="smartFill()"
+                    style="background:var(--primary); border:none; color:#000; border-radius:12px; font-weight:900; padding:12px; cursor:pointer; font-size:0.75rem; letter-spacing:1px;">INITIATE
+                    SYNERGY</button>
             </div>
         </div>
-        
-        <div class="chart-container">
-            <canvas id="radarChart"></canvas>
-        </div>
-    </aside>
+    </div>
 
-    <main class="glass-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05);">
-            <h3 style="margin:0">✨ Recommendations</h3>
-            <button id="exportBtn" class="export-btn" onclick="downloadPlaylist()">⬇ Download CSV</button>
-        </div>
-        
-        <ul id="results" class="song-list">
-            <div style="height:100%; display:flex; align-items:center; justify-content:center; opacity:0.5; flex-direction:column;">
-                <p>Ready to analyze audio vectors...</p>
-            </div>
-        </ul>
-    </main>
-</div>
+    <script>
+        let dnaChart;
+        let currentData = [];
+        let playlist = [];
+        let manualWeights = {};
+        let currentYearFilter = new Date().getFullYear();
+        let EmbedController = null;
+        let activeController = null;
 
-<script>
-    let myChart;
-    let currentData = [];
-
-    // 1. AUTO-POPULATE YEARS ON LOAD
-    document.addEventListener('DOMContentLoaded', function() {
-        const startSelect = document.getElementById('startYear');
-        const endSelect = document.getElementById('endYear');
-        const currentYear = new Date().getFullYear();
-
-        // 1950 to Current Year
-        for (let year = currentYear; year >= 1950; year--) {
-            let option1 = new Option(year, year);
-            let option2 = new Option(year, year);
-            
-            startSelect.add(option1);
-            endSelect.add(option2);
-        }
-    });
-
-    // 2. THEME CONFIGURATION
-    const themes = {
-        'happy': { color: '#FFD700', bg: 'radial-gradient(circle at top left, #403000, #09090b)' },
-        'chill': { color: '#00d2ff', bg: 'radial-gradient(circle at top left, #002b36, #09090b)' },
-        'sad':   { color: '#a18cd1', bg: 'radial-gradient(circle at top left, #2d2038, #09090b)' },
-        'default': { color: '#1DB954', bg: 'radial-gradient(circle at top left, #1a1a2e, #09090b)' }
-    };
-
-    function applyTheme(moodName) {
-        const t = themes[moodName] || themes['default'];
-        document.documentElement.style.setProperty('--primary', t.color);
-        document.body.style.background = t.bg;
-        if(myChart) {
-            myChart.data.datasets[0].borderColor = t.color;
-            myChart.data.datasets[0].backgroundColor = t.color + '40';
-            myChart.data.datasets[0].pointBackgroundColor = t.color;
-            myChart.update();
-        }
-    }
-
-    function manualThemeChange() { applyTheme(document.getElementById('mood').value); }
-    function handleEnter(e) { if(e.key === 'Enter') getRecs(); }
-
-    // 3. MAIN RECOMMENDATION LOGIC
-    async function getRecs() {
-        const btn = document.querySelector('button');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = "Scanning...";
-        btn.disabled = true;
-        
-        const payload = {
-            song_name: document.getElementById('songInput').value,
-            mood: document.getElementById('mood').value,
-            year_range: [
-                parseInt(document.getElementById('startYear').value) || 0,
-                parseInt(document.getElementById('endYear').value) || 3000
-            ],
-            limit: parseInt(document.getElementById('limit').value) || 10
+        window.onSpotifyIframeApiReady = (IFrameAPI) => {
+            EmbedController = IFrameAPI;
         };
 
-        try {
-            const res = await fetch('/recommend', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            
-            if(data.error) throw new Error(data.error);
+        document.addEventListener('DOMContentLoaded', () => {
+            initYearMatrix();
+            loadDNAStats();
+            renderHistory();
+            initScrollObserver();
 
-            // Auto-Mood Switch
-            if(document.getElementById('mood').value === 'default' && data.detected_mood) {
-                applyTheme(data.detected_mood);
+            // Click Outside Closure
+            document.addEventListener('click', (e) => {
+                const panels = document.querySelectorAll('.prism-panel');
+                const actions = document.querySelectorAll('.portal-action');
+                let hitResult = false;
+
+                panels.forEach(p => { if (p.contains(e.target)) hitResult = true; });
+                actions.forEach(a => { if (a.contains(e.target)) hitResult = true; });
+
+                if (!hitResult) {
+                    panels.forEach(p => p.classList.remove('active'));
+                    actions.forEach(a => a.classList.remove('active'));
+                }
+            });
+        });
+
+        function initYearMatrix() {
+            const grid = document.getElementById('yearGrid');
+            const years = [2024, 2020, 2015, 2010, 2005, 2000, 1990, 1980];
+            grid.innerHTML = years.map(y => `
+                <div class="year-chip ${y === currentYearFilter ? 'active' : ''}" onclick="setYear(${y}, this)">${y}s</div>
+            `).join('');
+        }
+
+        function setYear(y, el) {
+            currentYearFilter = y;
+            document.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function initScrollObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && document.body.classList.contains('view-results')) {
+                        document.body.classList.add('scrolled');
+                    } else {
+                        document.body.classList.remove('scrolled');
+                    }
+                });
+            }, { threshold: 0.2 });
+            observer.observe(document.getElementById('results-trigger'));
+        }
+
+        function togglePanel(id) {
+            const pid = id + 'Panel';
+            const el = document.getElementById(pid);
+            const isActive = el.classList.contains('active');
+
+            document.querySelectorAll('.prism-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.portal-action').forEach(b => b.classList.remove('active'));
+
+            if (!isActive) {
+                el.classList.add('active');
+                // Highlight the portal button
+                const buttons = document.querySelectorAll('.portal-action');
+                buttons.forEach(btn => {
+                    if (btn.innerText.toLowerCase().includes(id.toLowerCase())) btn.classList.add('active');
+                    if (id === 'discovery' && btn.innerText.toLowerCase().includes('filters')) btn.classList.add('active');
+                });
+            }
+        }
+
+        async function getRecs() {
+            const query = document.getElementById('songInput').value.trim();
+            if (!query) return showToast("⚠️ SIGNAL REQUIRED");
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.innerHTML = `<span class="spinner"></span>`;
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        song_name: query,
+                        year_range: [currentYearFilter - 10, currentYearFilter + 2],
+                        limit: parseInt(document.getElementById('limit').value),
+                        weights: manualWeights
+                    })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                currentData = [data.selected, ...data.recommendations];
+                document.body.classList.add('view-results');
+                document.getElementById('exploreState').style.display = 'none';
+
+                renderBento(currentData);
+                updateRadar(data.selected);
+                addToHistory(data.selected);
+
+                // Scroll to results automatically
+                document.getElementById('results-trigger').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (e) {
+                showToast("❌ DECODE FAILED");
+            } finally {
+                btn.innerHTML = `<span>ANALYZE</span>`;
+                btn.disabled = false;
+            }
+        }
+
+        function renderBento(songs) {
+            const container = document.getElementById('results');
+            container.innerHTML = songs.map((s, i) => `
+                <div class="bento-card" style="animation-delay: ${i * 0.1}s" id="card-${s.id}">
+                    <div class="card-dna-visual" style="background: ${generateArt(s.features)}; opacity: 0.9;">
+                        <div class="dna-mesh" style="opacity: 0.1;"></div>
+                        <div class="card-preview-layer" id="preview-${s.id}"></div>
+                        <div style="position:absolute; top:10px; left:10px; font-size:10px; opacity:0.3; letter-spacing:2px; font-weight:800;">SONIC DNA</div>
+                    </div>
+                    <div class="card-meta">
+                        <h4 style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${s.name}">${s.name}</h4>
+                        <p style="opacity:0.4; font-size:0.8rem;">${s.artists[0].name} • ${s.year}</p>
+                    </div>
+                    <div class="card-bottom">
+                         <div style="display:flex; gap:10px;">
+                            <button class="prism-btn-icon" onclick="addToMix(${i})">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </button>
+                            <button class="prism-btn-icon" onclick="playPreview('${s.id}', this); event.stopPropagation();">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </button>
+                         </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateRadar(sel) {
+            const labels = ['danceability', 'energy', 'speechiness', 'acousticness', 'valence'];
+            const ctx = document.getElementById('radarCanvas').getContext('2d');
+
+            if (dnaChart) dnaChart.destroy();
+            dnaChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels.map(l => l.toUpperCase()),
+                    datasets: [{
+                        data: labels.map(l => sel.features[l]),
+                        backgroundColor: 'rgba(var(--primary-raw), 0.1)',
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fff'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            min: 0, max: 1,
+                            ticks: { display: false },
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            angleLines: { color: 'rgba(255,255,255,0.1)' },
+                            pointLabels: { color: 'rgba(255,255,255,0.3)', font: { size: 10, family: 'Space Grotesk' } }
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    onClick: (e) => {
+                        const points = dnaChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                        if (points.length > 0) {
+                            const key = labels[points[0].index];
+                            manualWeights[key] = manualWeights[key] === 1.5 ? 1.0 : 1.5;
+                            showToast(`BOOSTING ${key.toUpperCase()}`);
+                        }
+                    }
+                }
+            });
+
+            const diag = document.getElementById('dnaDiagnostic');
+            diag.innerHTML = labels.map(l => `
+                <div style="background:rgba(255,255,255,0.025); padding:6px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                    <div style="font-size:0.55rem; opacity:0.4; letter-spacing:0.5px;">${l.toUpperCase()}</div>
+                    <div style="font-weight:800; font-size:1rem; color:#fff;">${(sel.features[l] * 100).toFixed(0)}%</div>
+                </div>
+            `).join('');
+
+            morphTheme(sel.features);
+        }
+
+        function generateArt(f) {
+            const h = f.valence * 360;
+            return `linear-gradient(135deg, hsla(${h}, 70%, 20%, 0.8), #020408)`;
+        }
+
+        function morphTheme(f) {
+            const h = f.valence * 360;
+            document.documentElement.style.setProperty('--primary-raw', `${h}, 100%, 70%`);
+        }
+
+        function addToMix(idx) {
+            const song = currentData[idx];
+            if (playlist.find(p => p.id === song.id)) return showToast("ALREADY IN SESSION");
+            playlist.push(song);
+            renderMix();
+        }
+
+        function renderMix() {
+            document.getElementById('mixCounter').innerText = playlist.length;
+            const container = document.getElementById('playlistItems');
+
+            if (playlist.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px; opacity:0.2; font-size:0.8rem;">REACTOR VACUUM</div>';
+                document.getElementById('mixDnaSummary').innerHTML = '';
+                document.getElementById('reactorResonance').innerText = '0%';
+                return;
             }
 
-            currentData = data.recommendations;
-            renderResults(data.recommendations);
-            updateChart(data.selected, data.recommendations[0]);
-            document.getElementById('exportBtn').style.display = 'block';
+            container.innerHTML = playlist.map((s, i) => {
+                const f = s.features;
+                return `
+                <div class="reactor-node">
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="font-size:0.85rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.name}</div>
+                        <div style="font-size:0.65rem; opacity:0.5;">${s.artists[0].name}</div>
+                    </div>
+                    <div class="dna-bands">
+                        <div class="dna-band" style="background:#64ffda; opacity:${f.energy}"></div>
+                        <div class="dna-band" style="background:#bb86fc; opacity:${f.valence}"></div>
+                        <div class="dna-band" style="background:#fff; opacity:${f.acousticness}"></div>
+                    </div>
+                    <button onclick="removeFromMix(${i})" style="background:none; border:none; color:rgba(255,255,255,0.2); font-size:1.1rem; cursor:pointer; z-index:2;">&times;</button>
+                </div>
+            `}).join('');
 
-        } catch(e) {
-            document.getElementById('results').innerHTML = `<p style="color:#ff5555; text-align:center; margin-top:50px;">❌ Song not found. Try another spelling!</p>`;
+            // Calculate Aggregate
+            const avg = {
+                energy: playlist.reduce((a, b) => a + b.features.energy, 0) / playlist.length,
+                valence: playlist.reduce((a, b) => a + b.features.valence, 0) / playlist.length,
+                danceability: playlist.reduce((a, b) => a + b.features.danceability, 0) / playlist.length,
+                acousticness: playlist.reduce((a, b) => a + b.features.acousticness, 0) / playlist.length,
+                speechiness: playlist.reduce((a, b) => a + b.features.speechiness, 0) / playlist.length
+            };
+
+            const labels = ['ENG', 'VAL', 'DNC', 'ACC', 'SPC'];
+            const keys = ['energy', 'valence', 'danceability', 'acousticness', 'speechiness'];
+
+            document.getElementById('mixDnaSummary').innerHTML = keys.map((k, i) => `
+                <div style="text-align:center;">
+                    <div style="font-size:0.5rem; opacity:0.4;">${labels[i]}</div>
+                    <div style="font-weight:800; font-size:0.75rem;">${(avg[k] * 100).toFixed(0)}</div>
+                </div>
+            `).join('');
+
+            const resonance = (Object.values(avg).reduce((a, b) => a + b, 0) / 5 * 100).toFixed(0);
+            document.getElementById('reactorResonance').innerText = resonance + '%';
         }
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
 
-    // 4. RENDER CARDS
-   function renderResults(songs) {
-        let html = '';
-        songs.forEach(s => {
-            // CLEANUP: Remove brackets and quotes from artist names
-            // Turns "['The Beatles']" into "The Beatles"
-            const cleanArtist = s.artists[0].name.replace(/[\[\]']/g, "");
+        function removeFromMix(idx) { playlist.splice(idx, 1); renderMix(); }
 
-            html += `
-                <li class="song-item">
-                    <img src="${s.album.images[0].url}" class="album-art">
-                    
-                    <div class="song-info">
-                        <h4>${s.name}</h4>
-                        <div class="song-meta">
-                            <span class="artist-name">${cleanArtist}</span>
-                            <span class="meta-separator">•</span>
-                            <span class="meta-tag year-tag">${s.year}</span>
-                            <span class="meta-tag album-tag">${s.album.name || 'Single'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="actions">
-                        <button class="fb-btn like-btn" onclick="feedback('${s.name.replace(/'/g, "\\'")}', 1)">
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                        </button>
-                        
-                        <button class="fb-btn dislike-btn" onclick="feedback('${s.name.replace(/'/g, "\\'")}', -1)">
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg>
-                        </button>
-                    </div>
-                </li>`;
-        });
-        document.getElementById('results').innerHTML = html;
-    }
+        async function smartFill() {
+            if (playlist.length === 0) return showToast("SEED REQUIRED");
+            try {
+                const res = await fetch('/recommend_mix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ songs: playlist })
+                });
+                const suggestions = await res.json();
+                suggestions.forEach(s => { if (!playlist.find(p => p.id === s.id)) playlist.push(s); });
+                renderMix();
+                showToast("SIGNAL OPTIMIZED");
+            } catch (e) { showToast("SCAN FAILED"); }
+        }
 
-    // 5. CHART CONFIG
-    function updateChart(sel, match) {
-        const ctx = document.getElementById('radarChart').getContext('2d');
-        const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-        
-        // The 5 key metrics we want to visualize
-        const keys = ['danceability', 'energy', 'speechiness', 'acousticness', 'valence'];
+        async function loadDNAStats() {
+            try {
+                const res = await fetch('/stats');
+                const data = await res.json();
+                const keys = Object.keys(data.deviation || {});
+                if (keys.length > 0) {
+                    const top = keys.reduce((a, b) => Math.abs(data.deviation[a]) > Math.abs(data.deviation[b]) ? a : b);
+                    document.getElementById('dnaStatsPanel').innerHTML = `<span style="font-size:0.7rem; opacity:0.6; letter-spacing:1px;">SONIC PREF: <strong style="color:var(--primary)">${top.toUpperCase()}</strong></span>`;
+                }
+            } catch (e) { }
+        }
 
-        if(myChart) myChart.destroy();
-        
-        myChart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: ['Dance', 'Energy', 'Speech', 'Acoustic', 'Valence'],
-                datasets: [
-                    { 
-                        label: 'Input', 
-                        // UPDATED: Access data via .features object
-                        data: keys.map(k => sel.features[k]), 
-                        borderColor: color, 
-                        backgroundColor: color + '40', // Semi-transparent glow
-                        borderWidth: 3,
-                        pointBackgroundColor: color,
-                        pointBorderColor: '#fff',
-                        pointHoverRadius: 6
-                    },
-                    { 
-                        label: 'Match', 
-                        // UPDATED: Access data via .features object here too
-                        data: keys.map(k => match.features[k]), 
-                        borderColor: 'rgba(255,255,255,0.3)', 
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                elements: { line: { tension: 0.3 } }, // Smooth curves
-                scales: { 
-                    r: { 
-                        min: 0, max: 1, 
-                        grid: { color: 'rgba(255,255,255,0.05)', circular: true },
-                        angleLines: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { display: false },
-                        pointLabels: { 
-                            color: '#ccc', 
-                            font: { size: 12, family: 'Space Grotesk' } 
-                        }
-                    } 
-                },
-                plugins: { legend: { display: false } }
-            } 
-        });
-    }
+        function addToHistory(song) {
+            let history = JSON.parse(localStorage.getItem('discovery_history') || '[]');
+            history = [song, ...history.filter(h => h.id !== song.id)].slice(0, 5);
+            localStorage.setItem('discovery_history', JSON.stringify(history));
+            renderHistory();
+        }
 
-    // 6. EXPORT CSV
-    function downloadPlaylist() {
-        let csv = "Track Name,Artist\n";
-        currentData.forEach(d => {
-            const cleanTrack = d.name.replace(/,/g, '');
-            const cleanArtist = d.artists[0].name.replace(/,/g, '');
-            csv += `"${cleanTrack}","${cleanArtist}"\n`;
-        });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'my_ai_playlist.csv';
-        a.click();
-    }
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('discovery_history') || '[]');
+            const container = document.getElementById('historyList');
+            if (history.length === 0) return container.innerHTML = '<p style="opacity:0.2; font-size:0.8rem;">CLEAN SLATE</p>';
+            container.innerHTML = history.map(s => {
+                const escapedName = s.name.replace(/'/g, "\\'");
+                return `<div style="padding:10px 0; cursor:pointer; font-size:0.8rem; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between;" onclick="document.getElementById('songInput').value='${escapedName}'; getRecs();">
+                    <span>${s.name}</span>
+                    <span style="opacity:0.3; font-size:0.7rem;">${s.artists[0].name}</span>
+                </div>`;
+            }).join('');
+        }
 
-    // 7. FEEDBACK
-    async function feedback(name, type) {
-        await fetch('/feedback', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({track_name: name, sentiment: type})
-        });
-    }
-</script>
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = 'toast show';
+            setTimeout(() => t.className = 'toast', 2000);
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') getRecs(); }
+        function exportPassport() { showToast("PASSPORT GENERATED"); }
+
+        function playPreview(trackId, btn) {
+            const card = document.getElementById(`card-${trackId}`);
+            const layer = document.getElementById(`preview-${trackId}`);
+
+            // Close other playing cards
+            document.querySelectorAll('.bento-card.playing').forEach(c => {
+                if (c.id !== `card-${trackId}`) {
+                    c.classList.remove('playing');
+                    const otherLayer = c.querySelector('.card-preview-layer');
+                    if (otherLayer) otherLayer.innerHTML = '';
+                    activeController = null; // Reset current controller
+                }
+            });
+
+            if (card.classList.contains('playing')) {
+                card.classList.remove('playing');
+                layer.innerHTML = '';
+                activeController = null;
+                return;
+            }
+
+            const options = {
+                width: '100%',
+                height: '100%',
+                uri: `spotify:track:${trackId}`
+            };
+
+            const callback = (EmbedControllerInstance) => {
+                activeController = EmbedControllerInstance;
+                card.classList.add('playing');
+
+                activeController.play();
+                showToast("CORE RESONANCE ACTIVE");
+            };
+
+            if (EmbedController) {
+                EmbedController.createController(layer, options, callback);
+            } else {
+                layer.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${trackId}?autoplay=1" width="100%" height="100%" frameBorder="0" allow="autoplay; encrypted-media"></iframe>`;
+                card.classList.add('playing');
+            }
+        }
+
+    </script>
+
+    <style>
+        .toast {
+            position: fixed;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #fff;
+            color: #000;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 800;
+            z-index: 10000;
+            transition: var(--tr-med);
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.2);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .dna-mesh {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 10px 10px;
+            pointer-events: none;
+        }
+
+        /* Bento Animation */
+        .bento-card {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: bentoIn 0.6s var(--ease-out) forwards;
+        }
+
+        @keyframes bentoIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </body>
+
 </html>
