@@ -18,22 +18,32 @@ class MusicEngine:
         self._load_data()
 
     def _load_data(self):
-        """Loads CSV and PKL files with robust path checking."""
+        """Loads CSV and PKL files with robust path checking (handles zipped CSV for hosting)."""
         base_dir = os.path.dirname(os.path.abspath(__file__))
         
-        # Define possible paths for the CSV
-        possible_csv_paths = [
-            os.path.join(base_dir, 'models', 'spotify_tracks.csv'),
-            os.path.join(base_dir, 'spotify_tracks.csv')
-        ]
+        csv_name = 'spotify_tracks.csv'
+        zip_name = 'spotify_tracks.zip'
         
-        csv_path = None
-        for path in possible_csv_paths:
-            if os.path.exists(path):
-                csv_path = path
-                break
+        # Check if CSV exists, if not, try decompressing ZIP
+        csv_path = os.path.join(base_dir, csv_name)
+        zip_path = os.path.join(base_dir, zip_name)
         
-        if csv_path:
+        # Subdirectory fallback
+        if not os.path.exists(csv_path) and not os.path.exists(zip_path):
+            csv_path = os.path.join(base_dir, 'models', csv_name)
+            zip_path = os.path.join(base_dir, 'models', zip_name)
+
+        if not os.path.exists(csv_path) and os.path.exists(zip_path):
+            print(f"📦 Unzipping {zip_name}...")
+            try:
+                import zipfile
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(os.path.dirname(csv_path))
+                print("✅ Unzipped successfully.")
+            except Exception as e:
+                print(f"❌ Error unzipping: {e}")
+
+        if os.path.exists(csv_path):
             try:
                 self.df = pd.read_csv(csv_path)
                 self.df.columns = self.df.columns.str.strip().str.lower()
@@ -42,7 +52,7 @@ class MusicEngine:
             except Exception as e:
                 print(f"❌ Error reading CSV: {e}")
         else:
-            print("❌ CRITICAL ERROR: 'spotify_tracks.csv' not found in 'models/' or root folder.")
+            print("❌ CRITICAL ERROR: 'spotify_tracks.csv' or '.zip' not found.")
             self.df = pd.DataFrame()
 
         # Load Embeddings (PKL)

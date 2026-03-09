@@ -3,11 +3,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 
-# Models & Data (too large for git)
+# Models & Data (Zipped for Render)
 *.csv
-*.pkl
-*.h5
-models/
+!spotify_tracks.zip
+!song_embeddings.pkl
+!encoder_model.h5
+# models/
 
 # Database
 *.db
