@@ -34,22 +34,21 @@ def recommend():
 
     # ── FAST PATH: Vibe mode with pre-parsed features ────────────
     if is_vibe_mode and vibe_features:
-        recommendations = engine.get_recommendations_by_features(vibe_features, limit=limit, allow_explicit=allow_explicit)
-        vibe_result = engine.parse_vibe_full(song_name)
-        return jsonify({
-            "selected": {
-                "id": "vibe-" + song_name.lower().replace(" ", "-")[:30],
-                "name": f'✦ {song_name.upper()}',
-                "artists": [{"name": "VIBE PROBE"}],
-                "year": "2026",
-                "features": vibe_features,
-                "genre": "Vibe Discovery",
-                "rarity_score": 0,
-                "vibe_tags": vibe_result.get('tags', []) if vibe_result else [],
-                "vibe_terms": vibe_result.get('matched_terms', []) if vibe_result else [],
-            },
-            "recommendations": recommendations
-        })
+        # Request limit + 1 so we can use the top result as the "selected" card
+        recommendations = engine.get_recommendations_by_features(vibe_features, limit=limit + 1, allow_explicit=allow_explicit)
+        
+        if recommendations:
+            selected = recommendations.pop(0)
+            vibe_result = engine.parse_vibe_full(song_name)
+            
+            # Inject the vibe context into the real track
+            selected["vibe_tags"] = vibe_result.get('tags', []) if vibe_result else []
+            selected["vibe_terms"] = vibe_result.get('matched_terms', []) if vibe_result else []
+            
+            return jsonify({
+                "selected": selected,
+                "recommendations": recommendations[:limit]
+            })
 
     # Search for the song
     search_results = engine.search_song(song_name)

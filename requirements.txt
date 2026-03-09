@@ -1,7 +1,8 @@
-flask
-flask-sqlalchemy
-tensorflow
-scikit-learn
-numpy
-pandas
-rapidfuzz
+Flask==3.1.1
+pandas==2.3.1
+scikit-learn==1.7.1
+numpy==2.3.2
+rapidfuzz==3.11.0
+gunicorn==23.0.0
+spotipy==2.25.2
+python-dotenv==1.2.1
