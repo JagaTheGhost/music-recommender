@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Models & Data (too large for git)
+*.csv
+*.pkl
+*.h5
+models/
+
+# Database
+*.db
+
+# Spotify OAuth cache
+.cache
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Backup
+BACKUP.txt

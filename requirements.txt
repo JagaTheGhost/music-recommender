@@ -1,0 +1,7 @@
+flask
+flask-sqlalchemy
+tensorflow
+scikit-learn
+numpy
+pandas
+rapidfuzz

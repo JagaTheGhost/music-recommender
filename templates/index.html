@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music AI | Aesthetic</title>
+    <!-- Modern Sans-Serif Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Flaticon Web Icons (Animated & Static) -->
+    <link rel='stylesheet'
+        href='https://cdn-uicons.flaticon.com/2.2.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <link rel='stylesheet'
+        href='https://cdn-uicons.flaticon.com/2.2.0/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <script>
+        // Prevent FOUC: Load theme before render
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') document.body.classList.add('aesthetic-dark');
+    </script>
+
+    <div class="glow-bg">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <i class="fi fi-sr-bolt fi-pulse brand-icon"></i>
+            <span>Music AI</span>
+        </div>
+
+        <div class="nav-actions">
+            <button class="icon-btn" onclick="toggleTheme()" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+                <i class="fi fi-rr-moon"></i>
+            </button>
+            <button class="icon-btn" onclick="togglePanel('playlistPanel')">
+                <i class="fi fi-rr-music-alt fi-tada-hover"></i>
+                <span id="mixCounter" class="nav-badge">0</span>
+            </button>
+            <button class="icon-btn" onclick="togglePanel('historyPanel')">
+                <i class="fi fi-rr-time-past fi-spin-hover"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- CONTENT WRAPPER -->
+    <main class="main-container">
+
+        <!-- HERO SEARCH SECTION -->
+        <section class="hero-section" id="heroSection">
+            <h1 class="hero-title">Discover your next obsession.</h1>
+            <p class="hero-subtitle">Describe a vibe or search for a track to generate a hyper-curated playlist.</p>
+
+            <div class="search-box">
+                <div class="search-toggle">
+                    <button class="toggle-btn active" id="modeSong" onclick="setSearchMode('song')">
+                        <i class="fi fi-rr-music-alt fi-bounce"></i> Song
+                    </button>
+                    <button class="toggle-btn" id="modeVibe" onclick="setSearchMode('vibe')">
+                        <i class="fi fi-rr-sparkles fi-pulse"></i> Vibe
+                    </button>
+                    <!-- Explicit Filter Toggle -->
+                    <label class="explicit-toggle" title="Allow Explicit Tracks">
+                        <input type="checkbox" id="allowExplicit" checked>
+                        <span class="x-mark">Explicit</span>
+                    </label>
+                </div>
+
+                <div class="search-input-wrapper">
+                    <div class="input-container">
+                        <i class="fi fi-rr-search search-icon"></i>
+                        <input type="text" id="songInput" class="aesthetic-input"
+                            placeholder="Search for a song or artist..."
+                            onkeyup="handleEnter(event); onSearchInput(this.value)">
+                    </div>
+                    <div class="search-action-btns">
+                        <button class="aesthetic-btn primary" id="analyzeBtn" onclick="getRecs()">
+                            <i class="fi fi-rr-magic-wand"></i> Search
+                        </button>
+                        <button class="aesthetic-btn secondary btn-roulette" id="rouletteBtn"
+                            onclick="triggerRoulette()" title="Surprise Me">
+                            <i class="fi fi-rr-dice-d20 fi-spin-hover"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Vibe feedback area -->
+                <div id="vibeChipStrip" class="vibe-strip"></div>
+            </div>
+
+        </section>
+
+        <!-- RESULTS SECTION -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <h2>Top Matches</h2>
+                <div class="filter-bubble">
+                    <i class="fi fi-rr-settings-sliders"></i>
+                    <input type="range" id="limit" min="1" max="25" value="12" class="slider"
+                        oninput="document.getElementById('limitVal').innerText=this.value">
+                    <span id="limitVal">12</span>
+                </div>
+            </div>
+
+            <!-- Grid for Cards -->
+            <div class="aesthetic-grid" id="resultsGrid">
+                <!-- Javascript injects cards here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FLOATING PLAYLIST PANEL (SLIDE IN FROM RIGHT) -->
+    <aside class="side-panel" id="playlistPanel">
+        <div class="panel-header">
+            <h3><i class="fi fi-rr-list-music fi-pulse"></i> Your Playlist</h3>
+            <button class="icon-btn close-btn" onclick="togglePanel('playlistPanel')">
+                <i class="fi fi-rr-cross"></i>
+            </button>
+        </div>
+
+        <div class="panel-content" id="playlistItems">
+            <div class="empty-state">
+                <i class="fi fi-rr-box-open fi-shake"></i>
+                <p>Playlist is empty</p>
+            </div>
+        </div>
+
+        <div class="panel-footer" id="playlistActions" style="display:none;">
+            <button class="aesthetic-btn primary full-width" onclick="findBridges()">
+                <i class="fi fi-rr-link-alt fi-spin-hover"></i> Find Transitions
+            </button>
+            <div class="action-row">
+                <button class="aesthetic-btn secondary" onclick="copySetList()">
+                    <i class="fi fi-rr-copy"></i>
+                </button>
+                <button class="aesthetic-btn danger" onclick="clearPlaylist()">
+                    <i class="fi fi-rr-trash"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- FLOATING HISTORY PANEL (SLIDE IN FROM RIGHT) -->
+    <aside class="side-panel" id="historyPanel">
+        <div class="panel-header">
+            <h3><i class="fi fi-rr-time-past fi-spin"></i> Recent History</h3>
+            <button class="icon-btn close-btn" onclick="togglePanel('historyPanel')">
+                <i class="fi fi-rr-cross"></i>
+            </button>
+        </div>
+        <div class="panel-content" id="historyList">
+            <div class="empty-state">
+                <i class="fi fi-rr-box-open"></i>
+                <p>Clean slate</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- FLOATING PLAYER -->
+    <div class="floating-player-wrapper" id="playerWrapper">
+        <div class="floating-player">
+            <div class="fp-embed" id="spotifyEmbedContainer">
+                <!-- iframe injected here -->
+            </div>
+            <button class="fp-close" onclick="closePlayer()" title="Close Player">
+                <i class="fi fi-rr-cross-small"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="aesthetic-toast"><i class="fi fi-rr-bell-ring fi-shake"></i> <span
+            id="toastMsg">Action</span></div>
+
+    <!-- LOGIC -->
+    <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+    <script>
+        // GLOBALS
+        let currentData = [];
+        let playlist = [];
+        let EmbedController = null;
+        let activeController = null;
+        let _vibeDebounceTimer = null;
+        let _lastVibeFeatures = null;
+        let _searchMode = 'song';
+        let playbackActive = false;
+
+        window.onSpotifyIframeApiReady = (IFrameAPI) => {
+            EmbedController = IFrameAPI;
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('aesthetic-dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.querySelector('#themeToggleBtn i').className = isDark ? 'fi fi-rr-sun' : 'fi fi-rr-moon';
+        }
+
+        // --- NEW: Vibe Sync Visualizer ---
+        function updateVibeSync(energy, tempo) {
+            // High energy/tempo = faster animations, deeper glow
+            const speed1 = Math.max(5, 20 - (energy * 10) - (tempo / 20)); // baseline 15s
+            const speed2 = Math.max(6, 22 - (energy * 10) - (tempo / 20)); // baseline 18s
+            const opacity = 0.1 + (energy * 0.15); // baseline 0.15
+
+            document.documentElement.style.setProperty('--orb-speed-1', `${speed1}s`);
+            document.documentElement.style.setProperty('--orb-speed-2', `${speed2}s`);
+            document.documentElement.style.setProperty('--orb-opacity', opacity);
+        }
+
+        // --- NEW: Roulette Mode ---
+        function triggerRoulette() {
+            setSearchMode('vibe');
+            showToast("Spinning the Roulette...");
+
+            const descriptors = ['hyper', 'melancholic', 'acoustic', 'electronic', 'heavy', 'ambient', 'upbeat', 'dark', 'chill', 'lo-fi', 'distorted', 'dreamy'];
+            const subjects = ['coding', 'studying', 'running', 'late night drive', 'party', 'sleeping', 'workout', 'meditation'];
+
+            const randomD = descriptors[Math.floor(Math.random() * descriptors.length)];
+            const randomD2 = descriptors[Math.floor(Math.random() * descriptors.length)];
+            const randomS = subjects[Math.floor(Math.random() * subjects.length)];
+
+            const query = `${randomD} and ${randomD2} music for ${randomS}`;
+
+            document.getElementById('songInput').value = query;
+            onSearchInput(query);
+
+            // Auto click search after API parses the vibe
+            setTimeout(() => { document.getElementById('analyzeBtn').click(); }, 600);
+        }
+
+        function togglePanel(id) {
+            document.querySelectorAll('.side-panel').forEach(p => {
+                if (p.id !== id) p.classList.remove('open');
+            });
+            document.getElementById(id).classList.toggle('open');
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') getRecs(); }
+
+        function setSearchMode(mode) {
+            _searchMode = mode;
+            const input = document.getElementById('songInput');
+            const chipStrip = document.getElementById('vibeChipStrip');
+
+            document.getElementById('modeSong').classList.toggle('active', mode === 'song');
+            document.getElementById('modeVibe').classList.toggle('active', mode === 'vibe');
+
+            if (mode === 'vibe') {
+                input.placeholder = 'e.g. upbeat music for a late-night drive...';
+                input.focus();
+                if (input.value.trim()) onSearchInput(input.value);
+            } else {
+                input.placeholder = 'Search for a song or artist...';
+                _lastVibeFeatures = null;
+                chipStrip.innerHTML = '';
+            }
+        }
+
+        function onSearchInput(value) {
+            if (_searchMode !== 'vibe') return;
+            clearTimeout(_vibeDebounceTimer);
+            const strip = document.getElementById('vibeChipStrip');
+
+            if (!value.trim()) {
+                strip.innerHTML = '';
+                _lastVibeFeatures = null;
+                return;
+            }
+
+            _vibeDebounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/parse_vibe?q=${encodeURIComponent(value)}`);
+                    const data = await res.json();
+                    _lastVibeFeatures = data.features || null;
+                    renderVibeChips(data);
+                } catch (e) { /* silent fail */ }
+            }, 400);
+        }
+
+        function renderVibeChips(data) {
+            const strip = document.getElementById('vibeChipStrip');
+            strip.innerHTML = '';
+            const tags = data.tags || [];
+            const conf = data.confidence || 0;
+
+            if (tags.length === 0) return;
+
+            tags.forEach(tag => {
+                const chip = document.createElement('span');
+                chip.className = 'vibe-chip';
+                chip.innerHTML = `<i class="fi fi-rr-hashtag"></i> ${tag}`;
+                strip.appendChild(chip);
+            });
+
+            if (conf > 0) {
+                const confChip = document.createElement('span');
+                confChip.className = 'vibe-chip conf';
+                confChip.innerHTML = `<i class="fi fi-rr-target"></i> ${Math.round(conf * 100)}% Match`;
+                strip.appendChild(confChip);
+            }
+        }
+
+        async function getRecs() {
+            const query = document.getElementById('songInput').value.trim();
+            if (!query) return showToast("Please enter a search term");
+
+            const btn = document.getElementById('analyzeBtn');
+            const prevHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fi fi-rr-spinner fi-spin"></i> Searching`;
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        song_name: query,
+                        limit: parseInt(document.getElementById('limit').value),
+                        is_vibe_mode: _searchMode === 'vibe',
+                        vibe_features: _searchMode === 'vibe' ? _lastVibeFeatures : null,
+                        allow_explicit: document.getElementById('allowExplicit').checked
+                    })
+                });
+
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                currentData = [data.selected, ...data.recommendations];
+
+                document.getElementById('heroSection').classList.add('collapsed');
+                document.getElementById('resultsSection').style.display = 'block';
+
+                renderGrid(currentData);
+                addToHistory(data.selected);
+
+                // Colorize background based on first track
+                const h = Math.round((data.selected.features?.valence || 0.5) * 360);
+                document.documentElement.style.setProperty('--glow-hue', h);
+
+            } catch (e) {
+                console.error(e);
+                showToast("Search failed: " + e.message);
+            } finally {
+                btn.innerHTML = prevHtml;
+                btn.disabled = false;
+            }
+        }
+
+        function getCardColor(valence) {
+            const h = Math.round((valence || 0.5) * 360);
+            return `hsl(${h}, 70%, 65%)`;
+        }
+
+        function renderGrid(songs) {
+            const container = document.getElementById('resultsGrid');
+            container.innerHTML = songs.map((s, idx) => {
+                const artistName = (s.artists && s.artists[0]) ? s.artists[0].name : 'Unknown Artist';
+                const safeId = String(s.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const accentColor = getCardColor(s.features?.valence);
+
+                // Fetch Album Art via Spotify oEmbed
+                fetch(`https://open.spotify.com/oembed?url=spotify:track:${s.id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const artDiv = document.getElementById(`art-${safeId}`);
+                        if (artDiv && data.thumbnail_url) {
+                            artDiv.style.backgroundImage = `url(${data.thumbnail_url})`;
+                            artDiv.style.backgroundSize = 'cover';
+                            artDiv.style.backgroundPosition = 'center';
+                        }
+                    }).catch(e => { /* Ignore missing art */ });
+
+                return `
+                <div class="a-card" id="card-${safeId}" style="--card-color: ${accentColor}" data-energy="${s.features?.energy || 0.5}" data-tempo="${s.features?.tempo || 120}">
+                    <!-- Add Button Overlay -->
+                    <button class="a-card-add" onclick="addToMix(${idx})" title="Add to Playlist">
+                        <i class="fi fi-sr-add fi-spin-hover"></i>
+                    </button>
+                    
+                    <div class="a-card-art" id="art-${safeId}" onclick="playTrack('${safeId}', '${s.id}', '${s.name.replace(/'/g, "\\'")}', '${artistName.replace(/'/g, "\\'")}')">
+                        <i class="fi fi-sr-play-circle play-icon fi-pulse-hover"></i>
+                        <div class="art-gradient"></div>
+                        <!-- Features visualization in corner -->
+                        <div class="a-card-badge"><i class="fi fi-rr-bolt fi-shake"></i> ${Math.round((s.features?.energy || 0.5) * 100)}%</div>
+                    </div>
+                    
+                    <div class="a-card-info">
+                        <h4 class="a-title" title="${s.name}">${s.name}</h4>
+                        <p class="a-artist">${artistName}</p>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function playTrack(safeId, originalId, trackName, artistName) {
+            const playerWrapper = document.getElementById('playerWrapper');
+            const embedContainer = document.getElementById('spotifyEmbedContainer');
+
+            playerWrapper.classList.add('active');
+
+            document.querySelectorAll('.a-card').forEach(c => c.classList.remove('playing'));
+            const card = document.getElementById(`card-${safeId}`);
+            // Inject Vibe Sync (modify background orb animation speed & opacity)
+            if (card) {
+                card.classList.add('playing');
+                const color = card.style.getPropertyValue('--card-color');
+                document.documentElement.style.setProperty('--player-glow', color);
+
+                // Vibe Sync
+                const energy = parseFloat(card.dataset.energy || 0.5);
+                const tempo = parseFloat(card.dataset.tempo || 120);
+                updateVibeSync(energy, tempo);
+            }
+
+            const options = {
+                width: '100%',
+                height: '80', // Spotify iframe magic minimum
+                uri: `spotify:track:${originalId}`
+            };
+
+            const callback = (EmbedControllerInstance) => {
+                activeController = EmbedControllerInstance;
+                activeController.play();
+                playbackActive = true;
+            };
+
+            if (EmbedController) {
+                embedContainer.innerHTML = '<div></div>';
+                EmbedController.createController(embedContainer.firstChild, options, callback);
+            } else {
+                embedContainer.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${originalId}?autoplay=1" width="100%" height="80" frameBorder="0" allow="autoplay; encrypted-media"></iframe>`;
+            }
+        }
+
+        function closePlayer() {
+            const playerWrapper = document.getElementById('playerWrapper');
+            playerWrapper.classList.remove('active');
+
+            if (activeController) {
+                activeController.pause();
+                playbackActive = false;
+            }
+
+            document.documentElement.style.setProperty('--player-glow', 'transparent');
+            updateVibeSync(0.5, 120);
+        }
+
+        function addToMix(idx) {
+            const song = currentData[idx];
+            if (playlist.find(p => p.id === song.id)) return showToast("Already in Playlist");
+            playlist.push(song);
+            renderMix();
+            showToast("Added to Playlist");
+
+            // Pulse the nav badge
+            const badge = document.getElementById('mixCounter');
+            badge.classList.remove('ping');
+            void badge.offsetWidth; // trigger reflow
+            badge.classList.add('ping');
+        }
+
+        function renderMix() {
+            document.getElementById('mixCounter').innerText = playlist.length;
+            const container = document.getElementById('playlistItems');
+            const actions = document.getElementById('playlistActions');
+
+            if (playlist.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fi fi-rr-box-open fi-shake"></i>
+                        <p>Playlist is empty</p>
+                    </div>`;
+                actions.style.display = 'none';
+                return;
+            }
+
+            actions.style.display = 'block';
+
+            container.innerHTML = playlist.map((s, i) => {
+                const artist = s.artists && s.artists[0] ? s.artists[0].name : 'Unknown';
+                const isBridge = s._bridge;
+                return `
+                <div class="p-item ${isBridge ? 'p-bridge' : ''}">
+                    ${isBridge ? '<span class="p-bridge-tag"><i class="fi fi-rr-link-alt"></i> Bridge</span>' : ''}
+                    <div class="p-item-num">${i + 1}</div>
+                    <div class="p-item-content">
+                        <div class="p-item-title">${s.name}</div>
+                        <div class="p-item-artist">${artist}</div>
+                    </div>
+                    ${!isBridge ? `<button class="p-item-del" onclick="removeFromMix(${i})"><i class="fi fi-sr-trash"></i></button>` : ''}
+                </div>
+                `;
+            }).join('');
+        }
+
+        function removeFromMix(idx) { playlist.splice(idx, 1); renderMix(); }
+        function clearPlaylist() { playlist = []; renderMix(); }
+
+        function copySetList() {
+            if (playlist.length === 0) return;
+            const text = playlist.map((s, i) => {
+                const artist = s.artists && s.artists[0] ? s.artists[0].name : 'Unknown';
+                const prefix = s._bridge ? ' [Transition] ' : `${i + 1}. `;
+                return `${prefix}${s.name} - ${artist}`;
+            }).join('\n');
+            navigator.clipboard.writeText(text).then(() => showToast('List Copied!')).catch(() => showToast('Copy Failed'));
+        }
+
+        async function findBridges() {
+            const coreTracks = playlist.filter(s => !s._bridge);
+            if (coreTracks.length < 2) return showToast('Add at least 2 tracks first');
+
+            showToast('Calculating sonic transitions...');
+            try {
+                const res = await fetch('/recommend_mix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        songs: coreTracks,
+                        limit: 10,
+                        allow_explicit: document.getElementById('allowExplicit').checked
+                    })
+                });
+                const data = await res.json();
+
+                if (data.recommendations && data.recommendations.length > 0) {
+                    const bridges = data.recommendations.slice(0, coreTracks.length - 1);
+                    const merged = [];
+                    coreTracks.forEach((s, i) => {
+                        merged.push(s);
+                        if (bridges[i]) merged.push({ ...bridges[i], _bridge: true });
+                    });
+                    playlist = merged;
+                    renderMix();
+                    showToast('Transitions inserted!');
+                    togglePanel('playlistPanel'); // ensure panel is open
+                } else {
+                    showToast('No smooth transitions found');
+                }
+            } catch (e) {
+                showToast('Transition calculation failed');
+            }
+        }
+
+        function addToHistory(song) {
+            let history = JSON.parse(localStorage.getItem('discovery_history') || '[]');
+            history = [song, ...history.filter(h => h.id !== song.id)].slice(0, 10);
+            localStorage.setItem('discovery_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('discovery_history') || '[]');
+            const container = document.getElementById('historyList');
+            if (!container) return;
+
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fi fi-rr-box-open"></i>
+                        <p>Clean slate</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = history.map(s => {
+                const escapedName = s.name.replace(/'/g, "\\'");
+                const artistName = (s.artists && s.artists[0]) ? s.artists[0].name : 'Unknown';
+                const color = getCardColor(s.features?.valence);
+                return `
+                <div class="p-item" onclick="document.getElementById('songInput').value='${escapedName}'; getRecs(); togglePanel('historyPanel');">
+                    <div class="p-item-num"><i class="fi fi-sr-play-circle" style="color:${color}"></i></div>
+                    <div class="p-item-content">
+                        <div class="p-item-title">${s.name}</div>
+                        <div class="p-item-artist">${artistName}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDark = document.body.classList.contains('aesthetic-dark');
+            const toggleIcon = document.querySelector('#themeToggleBtn i');
+            if (toggleIcon) toggleIcon.className = isDark ? 'fi fi-rr-sun' : 'fi fi-rr-moon';
+            renderHistory();
+        });
+
+    </script>
+</body>
+
+</html>
