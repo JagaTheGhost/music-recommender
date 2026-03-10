@@ -45,10 +45,28 @@ class MusicEngine:
 
         if os.path.exists(csv_path):
             try:
-                self.df = pd.read_csv(csv_path)
+                # Usecols and Dtypes for memory efficiency (Crucial for 512MB RAM limit)
+                use_cols = [
+                    'id', 'track_name', 'artists', 'explicit', 
+                    'danceability', 'energy', 'speechiness', 'acousticness', 
+                    'instrumentalness', 'valence', 'tempo', 'duration_ms', 'year'
+                ]
+                dtype_map = {
+                    'explicit': 'bool',
+                    'year': 'int16',
+                    'danceability': 'float32',
+                    'energy': 'float32',
+                    'speechiness': 'float32',
+                    'acousticness': 'float32',
+                    'instrumentalness': 'float32',
+                    'valence': 'float32',
+                    'tempo': 'float32',
+                    'duration_ms': 'int32'
+                }
+                self.df = pd.read_csv(csv_path, usecols=use_cols, dtype=dtype_map)
                 self.df.columns = self.df.columns.str.strip().str.lower()
                 self.df['search_str'] = self.df['track_name'].astype(str) + " " + self.df['artists'].astype(str)
-                print(f"✅ Data Loaded from: {csv_path}")
+                print(f"✅ Data Loaded (Memory Optimized): {csv_path}")
             except Exception as e:
                 print(f"❌ Error reading CSV: {e}")
         else:
